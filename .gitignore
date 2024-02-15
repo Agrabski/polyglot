@@ -11,3 +11,5 @@ target/
 
 # IntelliJ
 .idea/
+/PolyglotCSharp/PolyglotCSharp/Generated/NativeMethods.g.cs
+/PolyglotCSharp/.vs/PolyglotCSharp/v17
