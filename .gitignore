@@ -11,5 +11,7 @@ target/
 
 # IntelliJ
 .idea/
-/PolyglotCSharp/PolyglotCSharp/Generated/NativeMethods.g.cs
-/PolyglotCSharp/.vs/PolyglotCSharp/v17
+/PolyglotCSharp/PolyglotCSharp/Generated/
+polyglot_csharp/bindings/*
+PolyglotCSharp/.vs
+**/obj/*

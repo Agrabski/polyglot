@@ -1,0 +1,4 @@
+namespace polyglot_csharp {
+    boolean evaluate([ByRef]string code, [ByRef]record<string, string> parameters);
+};
+

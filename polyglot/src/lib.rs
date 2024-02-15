@@ -20,8 +20,8 @@ fn eval_internal<TParams: ParameterDictionary>(
         Some('(') => match expression.chars().nth(1) {
             None => None,
             Some(op @ ('=' | '!')) => {
-                let (left, index) = parse_operand(&expression[2..])?;
-                let (right, last_index) = parse_operand(&expression[index + 3..])?;
+                let (left, index) = parse_operand(&expression[2..], parameters)?;
+                let (right, last_index) = parse_operand(&expression[index + 3..], parameters)?;
                 match op {
                     '=' => Some((left == right, last_index)),
                     '!' => Some((left != right, last_index)),
@@ -51,7 +51,10 @@ fn eval_internal<TParams: ParameterDictionary>(
     }
 }
 
-fn parse_operand(expression: &str) -> Option<(&str, usize)> {
+fn parse_operand<'a, TParams: ParameterDictionary>(
+    expression: &'a str,
+    parameters: &'a TParams,
+) -> Option<(&'a str, usize)> {
     let start_index = expression.chars().position(|c| !c.is_whitespace());
     match start_index {
         None => None,
@@ -62,6 +65,18 @@ fn parse_operand(expression: &str) -> Option<(&str, usize)> {
                 let end_index = sub_expression.chars().position(|c| c == '\'');
                 end_index
                     .map(|end_index| (&sub_expression[..end_index], end_index + start_index + 1))
+            }
+            Some('@') => {
+                let sub_expression = &expression[start_index + 1..];
+                let end_index = sub_expression
+                    .chars()
+                    .position(|c| c.is_whitespace() || c == ')');
+                end_index.map(|end_index| {
+                    (
+                        parameters.get(&sub_expression[..end_index]).unwrap_or(&""),
+                        end_index + start_index + 1,
+                    )
+                })
             }
             Some(char) => {
                 if char.is_ascii_digit() {
@@ -75,6 +90,7 @@ fn parse_operand(expression: &str) -> Option<(&str, usize)> {
                     None
                 }
             }
+
             _ => None,
         },
     }
@@ -130,5 +146,12 @@ mod tests {
     pub fn simple_and_condition_evaluates_to_true() {
         let parameters = HashMap::new();
         assert!(evaluate_boolean_expression("(& (= 'a' 'a') (= 1 1))", &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn comparing_parameter_with_literal_returns_true() {
+        let mut parameters = HashMap::new();
+        parameters.insert("a".to_string(), "1".to_string());
+        assert!(evaluate_boolean_expression("(= '1' @a)", &parameters).unwrap());
     }
 }
