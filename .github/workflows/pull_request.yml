@@ -3,7 +3,7 @@ name: Pull Request Workflow
 on:
   pull_request:
     branches:
-      - main
+      - master
   workflow_dispatch:
 
 jobs:
@@ -19,9 +19,13 @@ jobs:
           dotnet-version: '8.x'
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-unknown-linux-gnu, x86_64-unknown-linux-gnu
+          targets: x86_64-unknown-linux-gnu, x86_64-pc-windows-gnu, wasm32-unknown-unknown
+      - name: Install windows linker
+        run: sudo apt-get install mingw-w64 -y 
+      - name: install cargo dotnet bindings generator
+        run: cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.2.0
       - name: Run tests
         run: |
           cargo test
-          dotnet test
+          dotnet test PolyglotCSharp
 
