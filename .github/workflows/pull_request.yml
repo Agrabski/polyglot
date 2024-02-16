@@ -14,8 +14,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Build docker images
-        run: docker build -t local < .devcontainer/DOCKERFILE
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu, x86_64-unknown-linux-gnu
       - name: Run tests
-        run: docker run -it -v $PWD:/srv -w/srv local dotnet test && cargo test
+        run: |
+          cargo test
+          dotnet test
 
