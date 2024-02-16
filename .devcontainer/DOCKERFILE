@@ -1,0 +1,35 @@
+# Use the official Rust image as the base image
+FROM rust:1.76
+
+# Install dependencies required for .NET SDK
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg2 \
+    software-properties-common \
+    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install build-essential
+
+# Add Microsoft package signing key and feed
+RUN curl -sSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor | tee /etc/apt/trusted.gpg.d/microsoft.asc.gpg > /dev/null \
+    && curl -sSL https://packages.microsoft.com/config/debian/10/prod.list | tee /etc/apt/sources.list.d/microsoft-prod.list \
+    && apt-get update
+
+# Install .NET SDK
+RUN apt-get install -y dotnet-sdk-8.0
+
+# Verify that .NET SDK and Rust are installed
+RUN dotnet --version
+RUN rustc --version
+RUN cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.2.0
+RUN rustup target add wasm32-unknown-unknown && rustup target add x86_64-pc-windows-gnu
+RUN apt-get install mingw-w64 -y 
+# Copy the current directory contents into the container
+RUN echo "source \$HOME/.cargo/env"> run.sh
+COPY . .
+
+# Set the PATH environment variable
+ENV PATH="/usr/local/cargo/bin:${PATH}"
+ENTRYPOINT [ "run.sh" ]

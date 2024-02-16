@@ -1,20 +1,26 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFrameworks>net8.0</TargetFrameworks>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
+	<Target 
+		Name="Rust build"
+		BeforeTargets="BeforeBuild"
+	>
+		<Exec Command="cargo build --release --target x86_64-pc-windows-gnu" WorkingDirectory="../../"/>
+		<Exec Command="cargo build --release --target x86_64-unknown-linux-gnu" WorkingDirectory="../../"/>
+	</Target>
 	<PropertyGroup>
-		<NativeOutputPath>../../target/$(Configuration.ToLowerInvariant())/</NativeOutputPath>
+		<NativeOutputPath>../../target/</NativeOutputPath>
 	</PropertyGroup>
 	<ItemGroup>
 		<Compile Include="..\..\polyglot_csharp\bindings\polyglot_csharp.cs" Link="polyglot_csharp.cs" />
 	</ItemGroup>
 	<ItemGroup>
-		<None Condition="$([MSBuild]::IsOsPlatform('MacOS'))" Include="$(NativeOutputPath)libpolyglot_csharp.dylib" CopyToOutputDirectory="PreserveNewest" />
-		<None Condition="$([MSBuild]::IsOsPlatform('Linux'))" Include="$(NativeOutputPath)libpolyglot_csharp.so" CopyToOutputDirectory="PreserveNewest" />
-		<None Condition="$([MSBuild]::IsOsPlatform('Windows'))" Include="$(NativeOutputPath)polyglot_csharp.dll" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="../../target/x86_64-pc-windows-gnu/release/polyglot_csharp.dll" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="../../target/x86_64-unknown-linux-gnu/release/libpolyglot_csharp.so" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 </Project>
