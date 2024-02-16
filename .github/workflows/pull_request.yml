@@ -19,7 +19,9 @@ jobs:
           dotnet-version: '8.x'
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-unknown-linux-gnu, x86_64-unknown-linux-gnu
+          targets: x86_64-unknown-linux-gnu, x86_64-unknown-linux-gnu, wasm32-unknown-unknown
+      - name: install cargo dotnet bindings generator
+        run: cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.2.0
       - name: Run tests
         run: |
           cargo test
