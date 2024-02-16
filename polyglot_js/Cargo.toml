@@ -1,0 +1,13 @@
+[package]
+name = "polyglot_js"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "polyglot_js"
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = { version = "0.2.91" }
+polyglot = { path = "../polyglot" }
+js-sys = "0.3.68"

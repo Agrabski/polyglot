@@ -1,0 +1,11 @@
+{
+  "name": "polyglot",
+  "version": "1.0.0",
+  "description": "Cross language interpreter of simple logical expressions",
+  "main": "index.js",
+  "scripts": {
+    "build": "cargo build --release --manifest-path ../../Cargo.toml --target wasm32-unknown-unknown && ",
+  },
+  "author": "Adam Grabski",
+  "license": "MIT"
+}
