@@ -25,5 +25,5 @@ jobs:
       - name: Run tests
         run: |
           cargo test
-          dotnet test
+          dotnet test PolyglotCSharp
 
