@@ -1,0 +1,21 @@
+name: Pull Request Workflow
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Build docker images
+        run: docker build -t local < .devcontainer/Dockerfile
+      - name: Run tests
+        run: docker run -it -v $PWD:/srv -w/srv local dotnet test && cargo test
+
