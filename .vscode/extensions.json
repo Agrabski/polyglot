@@ -1,0 +1,10 @@
+{
+    "recommendations": [
+        "ms-dotnettools.vscode-dotnet-runtime",
+        "ms-dotnettools.csharp",
+        "1yib.rust-bundle",
+        "rust-lang.rust-analyzer",
+        "be5invis.toml",
+        "ms-azuretools.vscode-docker"
+    ]
+}

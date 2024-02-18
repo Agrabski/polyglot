@@ -20,11 +20,16 @@ RUN curl -sSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor 
 # Install .NET SDK
 RUN apt-get install -y dotnet-sdk-8.0
 
+# node
+RUN apt-get install curl &&\
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sh - &&\
+    apt-get install -y nodejs
+
 # Verify that .NET SDK and Rust are installed
 RUN dotnet --version
 RUN rustc --version
 RUN cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.2.0
-RUN rustup target add wasm32-unknown-unknown && rustup target add x86_64-pc-windows-gnu
+RUN rustup target add wasm32-unknown-unknown && rustup target add x86_64-pc-windows-gnu && rustup component add rustfmt && rustup component add clippy
 RUN apt-get install mingw-w64 -y 
 # Copy the current directory contents into the container
 RUN echo "source \$HOME/.cargo/env"> run.sh

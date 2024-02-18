@@ -11,3 +11,5 @@ crate-type = ["cdylib"]
 wasm-bindgen = { version = "0.2.91" }
 polyglot = { path = "../polyglot" }
 js-sys = "0.3.68"
+[profile.release]
+lto = true
