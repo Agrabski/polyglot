@@ -1,13 +1,9 @@
-use std::collections::HashMap;
-
-use js_sys::Map;
+use js_sys::{wasm_bindgen, Map};
 use polyglot::evaluate_boolean_expression;
-use wasm_bindgen::prelude::wasm_bindgen;
-#[wasm_bindgen(typescript_custom_section)]
-const TS_SIGNATURE: &'static str = r#"
-export function evaluate(expression: string, parameters: Map<string, string>): boolean;
-"#;
+use std::collections::HashMap;
+use wasm_bindgen::prelude::*;
 
+#[wasm_bindgen]
 pub fn evaluate(expression: &str, parameters: Map) -> bool {
     // jesus christ... this is retarded.
     // we have to store parameters in an owned hashmap because we can't

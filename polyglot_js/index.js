@@ -1,4 +1,4 @@
-import { evaluate } from './pkg/index.js';
+import { evaluate } from './pkg';
 
 /**
  * Evaluates a boolean expression with the given parameters.

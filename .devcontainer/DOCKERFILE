@@ -29,7 +29,7 @@ RUN apt-get install curl &&\
 RUN dotnet --version
 RUN rustc --version
 RUN cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.2.0
-RUN rustup target add wasm32-unknown-unknown && rustup target add x86_64-pc-windows-gnu && rustup component add rustfmt && rustup component add clippy
+RUN rustup target add wasm32-unknown-unknown && rustup target add x86_64-pc-windows-gnu && rustup component add rustfmt && rustup component add clippy && cargo install wasm-pack
 RUN apt-get install mingw-w64 -y 
 # Copy the current directory contents into the container
 RUN echo "source \$HOME/.cargo/env"> run.sh
