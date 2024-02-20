@@ -37,7 +37,7 @@ jobs:
         run: |
           cd polyglot_js
           npm install
-          npm build
+          npm run build
           wasm-pack test --node
           cd ../polyglot_js_bindings
           npm install
