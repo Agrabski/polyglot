@@ -5,5 +5,19 @@
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"build": {
 		"dockerfile": "Dockerfile"
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"1YiB.rust-bundle",
+				"ms-dotnettools.csharp",
+				"ms-dotnettools.csdevkit",
+				"ms-dotnettools.vscode-dotnet-runtime",
+				"rust-lang.rust-analyzer",
+				"be5invis.toml",
+				"ms-azuretools.vscode-docker",
+				"Orta.vscode-jest"
+			]
+		}
 	}
 }

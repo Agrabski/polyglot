@@ -1,0 +1,22 @@
+{
+  "name": "polyglot_js",
+  "version": "1.0.0",
+  "description": "Cross language interpreter of simple logical expressions",
+  "author": "Adam Grabski",
+  "license": "MIT",
+  "scripts": {
+    "build": "webpack && cd pkg && npm pkg set type=module && cd .."
+  },
+  "devDependencies": {
+    "@babel/core": "^7.23.9",
+    "@babel/preset-env": "^7.23.9",
+    "@wasm-tool/wasm-pack-plugin": "1.5.0",
+    "babel-jest": "^29.7.0",
+    "html-webpack-plugin": "^5.3.2",
+    "jest": "29.7.0",
+    "text-encoding": "^0.7.0",
+    "webpack": "^5.90.3",
+    "webpack-cli": "^5.1.4"
+  },
+  "type": "module"
+}

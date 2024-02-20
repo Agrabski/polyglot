@@ -24,8 +24,22 @@ jobs:
         run: sudo apt-get install mingw-w64 -y 
       - name: install cargo dotnet bindings generator
         run: cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.2.0
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
       - name: Run tests
         run: |
           cargo test
           dotnet test PolyglotCSharp
+      - name: Run js tests
+        run: |
+          cd polyglot_js
+          npm install
+          npm run build
+          wasm-pack test --node
+          cd ../polyglot_js_bindings_tests
+          npm install
+          npm test
 
