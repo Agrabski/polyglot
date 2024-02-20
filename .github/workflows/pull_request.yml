@@ -35,9 +35,10 @@ jobs:
           dotnet test PolyglotCSharp
       - name: Run js tests
         run: |
-          cd Polyglot_js
+          cd polyglot_js
           npm install
           npm build
+          wasm-pack test --node
           cd ../polyglot_js_bindings
           npm install
           npm test
