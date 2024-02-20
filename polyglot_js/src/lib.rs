@@ -1,27 +1,52 @@
-use js_sys::{wasm_bindgen, Map};
+use js_sys::{Object, Reflect};
 use polyglot::evaluate_boolean_expression;
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub fn evaluate(expression: &str, parameters: Map) -> bool {
+pub fn evaluate(expression: &str, parameters: &Object) -> bool {
     // jesus christ... this is retarded.
     // we have to store parameters in an owned hashmap because we can't
     // borrow memory from the JS side.
-    let parameters = parameters
-        .keys()
+    let parameters = convert_parameters(parameters);
+    evaluate_boolean_expression(expression, &parameters).unwrap()
+}
+
+fn convert_parameters(parameters: &Object) -> HashMap<String, String> {
+    js_sys::Object::keys(parameters)
         .into_iter()
-        .flat_map(|key| {
-            key.map(|k| {
-                let v = parameters.get(&k).as_string()?;
-                let key = k.as_string()?;
-                Some((key, v))
-            })
+        .filter_map(|key| {
+            let v = Reflect::get(parameters, &key).ok()?.as_string()?;
+            let k = key.as_string()?;
+            Some((k, v))
         })
-        .flatten()
         .fold(HashMap::default(), |mut acc, (key, value)| {
             acc.insert(key, value);
             acc
-        });
-    evaluate_boolean_expression(expression, &parameters).unwrap_or(false)
+        })
+}
+
+#[cfg(test)]
+mod tests {
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    use super::*;
+
+    #[wasm_bindgen_test]
+    fn object_with_one_key_is_converted_to_hashmap() {
+        let map = Object::new();
+        Reflect::set(&map, &"key".into(), &"value".into()).unwrap();
+        let result = convert_parameters(&map);
+        let mut expected = HashMap::new();
+        expected.insert("key".to_string(), "value".to_string());
+        assert_eq!(result, expected);
+    }
+
+    #[wasm_bindgen_test]
+    fn simple_expression_with_parameters_evaluates_to_true() {
+        let map = Object::new();
+        Reflect::set(&map, &"a".into(), &"1".into()).unwrap();
+        let result = evaluate("(= @a 1)", &map);
+        assert!(result);
+    }
 }

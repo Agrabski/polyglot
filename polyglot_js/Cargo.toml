@@ -1,15 +1,19 @@
 [package]
+edition = "2021"
 name = "polyglot_js"
 version = "0.1.0"
-edition = "2021"
 
 [lib]
-name = "polyglot_js"
 crate-type = ["cdylib"]
+name = "polyglot_js"
 
 [dependencies]
-wasm-bindgen = { version = "0.2.91" }
-polyglot = { path = "../polyglot" }
 js-sys = "0.3.68"
+polyglot = {path = "../polyglot"}
+wasm-bindgen = {version = "0.2.91"}
 [profile.release]
 lto = true
+[build]
+target = "wasm32-unknown-unknown"
+[dev-dependencies]
+wasm-bindgen-test = "0.3.0"
