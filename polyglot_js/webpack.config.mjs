@@ -1,13 +1,18 @@
-const path = require('path');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const webpack = require('webpack');
-const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
+import { resolve } from 'path';
+import HtmlWebpackPlugin from 'html-webpack-plugin';
+import webpack from 'webpack';
+import WasmPackPlugin from "@wasm-tool/wasm-pack-plugin";
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-module.exports = {
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+export default {
     plugins: [
         new HtmlWebpackPlugin(),
         new WasmPackPlugin({
-            crateDirectory: path.resolve(__dirname, ".")
+            crateDirectory: resolve(__dirname, ".")
         }),
         // Have this example work in Edge which doesn't ship `TextEncoder` or
         // `TextDecoder` at this time.
@@ -19,6 +24,5 @@ module.exports = {
     mode: 'production',
     experiments: {
         asyncWebAssembly: true
-    },
-    
+    }
 };
