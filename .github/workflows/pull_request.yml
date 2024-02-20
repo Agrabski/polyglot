@@ -24,6 +24,8 @@ jobs:
         run: sudo apt-get install mingw-w64 -y 
       - name: install cargo dotnet bindings generator
         run: cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.2.0
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
       - uses: actions/setup-node@v4
         with:
           node-version: 18
