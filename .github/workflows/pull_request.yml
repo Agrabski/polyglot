@@ -39,7 +39,7 @@ jobs:
           npm install
           npm run build
           wasm-pack test --node
-          cd ../polyglot_js_bindings
+          cd ../polyglot_js_bindings_tests
           npm install
           npm test
 
