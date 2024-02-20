@@ -1,10 +1,8 @@
 {
   "name": "polyglot-js-bindings",
   "version": "1.0.0",
-  "description": "Cross language interpreter of simple logical expressions",
   "author": "Adam Grabski",
   "license": "MIT",
-  "type": "module",
   "scripts": {
     "test": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js ./"
   },
