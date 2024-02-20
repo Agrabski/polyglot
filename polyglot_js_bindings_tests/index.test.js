@@ -1,4 +1,4 @@
-import { evaluate } from "polyglot_js/index.js";
+import evaluate from './index.js'
 
 test('Basic expression with parameters evaluates correctly', () => {
     const expression = '(= @a 1)';

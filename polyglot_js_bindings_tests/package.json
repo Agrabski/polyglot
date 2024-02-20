@@ -1,8 +1,9 @@
 {
-  "name": "polyglot-js-bindings",
+  "name": "polyglot-js-bindings-tests",
   "version": "1.0.0",
   "author": "Adam Grabski",
   "license": "MIT",
+  "type": "module",
   "scripts": {
     "test": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js ./"
   },
