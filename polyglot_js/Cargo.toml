@@ -10,7 +10,7 @@ name = "polyglot_js"
 
 [dependencies]
 js-sys = "0.3.68"
-polyglot = {path = "../polyglot"}
+polyglot_interpreter = {path = "../polyglot"}
 wasm-bindgen = {version = "0.2.91"}
 [profile.release]
 lto = true
