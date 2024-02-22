@@ -15,4 +15,5 @@ target/
 polyglot_csharp/bindings/*
 PolyglotCSharp/.vs
 **/obj/*
+**/bin/**
 polyglot_js/dist/
