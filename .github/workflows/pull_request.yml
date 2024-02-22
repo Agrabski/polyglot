@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-test:
+  publish:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,12 +16,12 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.x'
+          dotnet-version: "8.x"
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-unknown-linux-gnu, x86_64-pc-windows-gnu, wasm32-unknown-unknown
       - name: Install windows linker
-        run: sudo apt-get install mingw-w64 -y 
+        run: sudo apt-get install mingw-w64 -y
       - name: install cargo dotnet bindings generator
         run: cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.2.0
       - name: Install wasm-pack
@@ -42,4 +42,3 @@ jobs:
           cd ../polyglot_js_bindings_tests
           npm install
           npm test
-
