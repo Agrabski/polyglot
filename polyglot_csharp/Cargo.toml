@@ -1,19 +1,19 @@
 [package]
-name = "polyglot_csharp"
-version = "0.1.0"
-edition = "2021"
 build = "build.rs"
+edition = "2021"
+name = "polyglot_csharp"
 publish = false
+version = "0.1.0"
 
 [lib]
-name = "polyglot_csharp"
 crate-type = ["cdylib"]
+name = "polyglot_csharp"
 
 [dependencies]
 pileks_uniffi-bindgen-cs = "0.2.1"
-polyglot = { path = "../polyglot" }
-uniffi = { version = "0.23.0", features = ["build"] }
+polyglot_interpreter = {path = "../polyglot"}
+uniffi = {version = "0.23.0", features = ["build"]}
 
 [build-dependencies]
-uniffi = { version = "0.23.0", features = ["build"] }
+uniffi = {version = "0.23.0", features = ["build"]}
 uniffi_bindgen = "0.23.0"

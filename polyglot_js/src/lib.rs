@@ -1,5 +1,5 @@
 use js_sys::{Object, Reflect};
-use polyglot::evaluate_boolean_expression;
+use polyglot_interpreter::evaluate_boolean_expression;
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 
