@@ -1,20 +1,29 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net8.0</TargetFrameworks>
+		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<Version>0.1.0</Version>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
 	</PropertyGroup>
-	<Target 
-		Name="Rust build"
-		BeforeTargets="BeforeBuild"
-	>
-		<Exec Command="cargo build --release --target x86_64-pc-windows-gnu" WorkingDirectory="../../"/>
-		<Exec Command="cargo build --release --target x86_64-unknown-linux-gnu" WorkingDirectory="../../"/>
+	<Target Name="Rust build" BeforeTargets="BeforeBuild">
+		<Exec Command="cargo build --release --target x86_64-pc-windows-gnu" WorkingDirectory="../../" />
+		<Exec Command="cargo build --release --target x86_64-unknown-linux-gnu" WorkingDirectory="../../" />
 	</Target>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+	</ItemGroup>
 	<PropertyGroup>
 		<NativeOutputPath>../../target/</NativeOutputPath>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<Authors>Agrabski</Authors>
+		<PackageReadmeFile>Readme.md</PackageReadmeFile>
+		<RepositoryUrl>https://github.com/Agrabski/polyglot.git</RepositoryUrl>
+		<IncludeSymbols>True</IncludeSymbols>
 	</PropertyGroup>
 	<ItemGroup>
 		<Compile Include="..\..\polyglot_csharp\bindings\polyglot_csharp.cs" Link="polyglot_csharp.cs" />
@@ -22,5 +31,9 @@
 	<ItemGroup>
 		<None Include="../../target/x86_64-pc-windows-gnu/release/polyglot_csharp.dll" CopyToOutputDirectory="PreserveNewest" />
 		<None Include="../../target/x86_64-unknown-linux-gnu/release/libpolyglot_csharp.so" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\..\Readme.md">
+		  <Pack>True</Pack>
+		  <PackagePath>\</PackagePath>
+		</None>
 	</ItemGroup>
 </Project>

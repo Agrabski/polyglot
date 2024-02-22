@@ -1,0 +1,50 @@
+name: Publish
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.x"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu, x86_64-pc-windows-gnu, wasm32-unknown-unknown
+      - name: Install windows linker
+        run: sudo apt-get install mingw-w64 -y
+      - name: install cargo dotnet bindings generator
+        run: cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.2.0
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - uses: katyo/publish-crates@v2
+        with:
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      - name: build js
+        run: |
+          cd polyglot_js
+          npm install
+          npm run build
+          npm publish
+          cd ../
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_API_KEY }}
+      - name: Build solution and generate NuGet package
+        run: |
+          cd PolyglotCSharp
+          dotnet pack -c Release -o out
+
+      - name: Push generated package
+        run: dotnet nuget push ./PolyglotCSharp/out/*.nupkg --skip-duplicate --no-symbols false -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json

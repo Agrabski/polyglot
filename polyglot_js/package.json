@@ -1,8 +1,9 @@
 {
   "name": "polyglot_js",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Cross language interpreter of simple logical expressions",
   "author": "Adam Grabski",
+  "readme": "../README.md",
   "license": "MIT",
   "scripts": {
     "build": "webpack && cd pkg && npm pkg set type=module && cd .."

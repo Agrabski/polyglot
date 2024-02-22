@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Adam Grabski"]
 license = "MIT"
+description = "A cross-platform, cross-language interpreter of simple logical expressions"
+repository = "https://github.com/Agrabski/polyglot"
+readme = "../README.md"
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
