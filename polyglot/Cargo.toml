@@ -4,7 +4,7 @@ description = "A cross-platform, cross-language interpreter of simple logical ex
 edition = "2021"
 license = "MIT"
 name = "polyglot_interpreter"
-readme = "../README.md"
+readme = "../Readme.md"
 repository = "https://github.com/Agrabski/polyglot"
 version = "0.1.0"
 
