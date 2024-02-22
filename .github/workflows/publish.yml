@@ -46,5 +46,5 @@ jobs:
           cd PolyglotCSharp
           dotnet pack -c Release -o out
 
-      - name: Push generated package to GitHub registry
-        run: dotnet nuget push ./PolyglotCSharp/out/*.nupkg --skip-duplicate --no-symbols false
+      - name: Push generated package
+        run: dotnet nuget push ./PolyglotCSharp/out/*.nupkg --skip-duplicate --no-symbols false -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
