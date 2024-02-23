@@ -34,6 +34,15 @@ jobs:
         with:
           registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
           ignore-unpublished-changes: true
+      - name: Build solution and generate NuGet package
+        run: |
+          cd PolyglotCSharp
+          dotnet build -c Release
+          dotnet pack -c Release -o out
+
+      - name: Push generated package
+        run: dotnet nuget push ./PolyglotCSharp/out/*.nupkg --skip-duplicate --no-symbols false -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
+
       - name: build js
         run: |
           cd polyglot_js
@@ -44,11 +53,3 @@ jobs:
           cd ../
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_API_KEY }}
-      - name: Build solution and generate NuGet package
-        run: |
-          cd PolyglotCSharp
-          dotnet build -c Release
-          dotnet pack -c Release -o out
-
-      - name: Push generated package
-        run: dotnet nuget push ./PolyglotCSharp/out/*.nupkg --skip-duplicate --no-symbols false -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
