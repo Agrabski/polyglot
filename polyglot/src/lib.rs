@@ -4,6 +4,13 @@ pub trait ParameterDictionary {
     fn get(&self, key: &str) -> Option<&str>;
 }
 
+pub const EQUAL_OPERATOR: char = '=';
+pub const NOT_EQUAL_OPERATOR: char = '!';
+pub const GREATER_THAN_OPERATOR: char = '>';
+pub const GREATER_EQUAL_THAN_OPERATOR: char = ']';
+pub const LESS_THAN_OPERATOR: char = '<';
+pub const LESS_EQUAL_THAN_OPERATOR: char = '[';
+
 pub fn evaluate_boolean_expression<TParams: ParameterDictionary>(
     expression: &str,
     parameters: &TParams,
@@ -19,13 +26,13 @@ fn eval_internal<TParams: ParameterDictionary>(
     match expression.chars().next() {
         Some('(') => match expression.chars().nth(1) {
             None => None,
-            Some(op @ ('=' | '!')) => {
+            Some(op @ (EQUAL_OPERATOR | NOT_EQUAL_OPERATOR | '>' | '<')) => {
                 let (left, index) = parse_operand(&expression[2..], parameters)?;
                 let (right, last_index) = parse_operand(&expression[index + 3..], parameters)?;
                 match op {
-                    '=' => Some((left == right, last_index)),
-                    '!' => Some((left != right, last_index)),
-                    _ => None,
+                    EQUAL_OPERATOR => Some((left == right, last_index)),
+                    NOT_EQUAL_OPERATOR => Some((left != right, last_index)),
+                    _ => compare_numeric_values(op, left, right).map(|v| (v, last_index)),
                 }
             }
             Some(op @ ('&' | '|')) => {
@@ -51,6 +58,10 @@ fn eval_internal<TParams: ParameterDictionary>(
     }
 }
 
+fn compare_numeric_values(op: char, left: &str, right: &str) -> Option<bool> {
+    None
+}
+
 fn parse_operand<'a, TParams: ParameterDictionary>(
     expression: &'a str,
     parameters: &'a TParams,
@@ -73,7 +84,7 @@ fn parse_operand<'a, TParams: ParameterDictionary>(
                     .position(|c| c.is_whitespace() || c == ')');
                 end_index.map(|end_index| {
                     (
-                        parameters.get(&sub_expression[..end_index]).unwrap_or(&""),
+                        parameters.get(&sub_expression[..end_index]).unwrap_or(""),
                         end_index + start_index + 1,
                     )
                 })
@@ -153,5 +164,12 @@ mod tests {
         let mut parameters = HashMap::new();
         parameters.insert("a".to_string(), "1".to_string());
         assert!(evaluate_boolean_expression("(= '1' @a)", &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn comparison_operator_compares_integers_correctly_with_string_literal_syntax() {
+        let mut parameters = HashMap::new();
+        parameters.insert("a".to_string(), "1".to_string());
+        assert!(evaluate_boolean_expression("(> '111' @a)", &parameters).unwrap());
     }
 }
