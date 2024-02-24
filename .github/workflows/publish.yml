@@ -41,7 +41,7 @@ jobs:
           dotnet pack -c Release -o out
 
       - name: Push generated package
-        run: dotnet nuget push ./**\*.nupkg;-:**\*.symbols.nupkg --skip-duplicate --no-symbols false -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
+        run: dotnet nuget push ./PolyglotCSharp/out/PolyglotCSharp.nupkg --skip-duplicate --no-symbols false -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
 
       - name: build js
         run: |
