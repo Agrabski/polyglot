@@ -26,7 +26,14 @@ fn eval_internal<TParams: ParameterDictionary>(
     match expression.chars().next() {
         Some('(') => match expression.chars().nth(1) {
             None => None,
-            Some(op @ (EQUAL_OPERATOR | NOT_EQUAL_OPERATOR | '>' | '<')) => {
+            Some(
+                op @ (EQUAL_OPERATOR
+                | NOT_EQUAL_OPERATOR
+                | GREATER_THAN_OPERATOR
+                | GREATER_EQUAL_THAN_OPERATOR
+                | LESS_THAN_OPERATOR
+                | LESS_EQUAL_THAN_OPERATOR),
+            ) => {
                 let (left, index) = parse_operand(&expression[2..], parameters)?;
                 let (right, last_index) = parse_operand(&expression[index + 3..], parameters)?;
                 match op {
@@ -59,7 +66,27 @@ fn eval_internal<TParams: ParameterDictionary>(
 }
 
 fn compare_numeric_values(op: char, left: &str, right: &str) -> Option<bool> {
-    None
+    if left.len() == right.len() {
+        for (l, r) in left.chars().zip(right.chars()) {
+            if l != r {
+                return match op {
+                    GREATER_THAN_OPERATOR => Some(l > r),
+                    GREATER_EQUAL_THAN_OPERATOR => Some(l >= r),
+                    LESS_THAN_OPERATOR => Some(l < r),
+                    LESS_EQUAL_THAN_OPERATOR => Some(l <= r),
+                    _ => None,
+                };
+            }
+        }
+        Some(op == GREATER_EQUAL_THAN_OPERATOR || op == LESS_EQUAL_THAN_OPERATOR)
+    } else {
+        Some(
+            left.len() > right.len()
+                && (op == GREATER_THAN_OPERATOR || op == GREATER_EQUAL_THAN_OPERATOR)
+                || left.len() < right.len()
+                    && (op == LESS_THAN_OPERATOR || op == LESS_EQUAL_THAN_OPERATOR),
+        )
+    }
 }
 
 fn parse_operand<'a, TParams: ParameterDictionary>(
