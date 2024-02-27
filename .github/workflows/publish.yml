@@ -41,9 +41,9 @@ jobs:
         working-directory: ./PolyglotCSharp
 
       - name: Push generated package
-        run: dotnet nuget push ./out\*.nupkg --skip-duplicate --no-symbols true -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
+        run: dotnet nuget push ./out/*.nupkg --skip-duplicate --no-symbols true -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
         working-directory: ./PolyglotCSharp
-        
+
       - name: build js
         run: |
           cd polyglot_js
