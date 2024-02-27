@@ -23,7 +23,7 @@
 		<Authors>Agrabski</Authors>
 		<PackageReadmeFile>Readme.md</PackageReadmeFile>
 		<RepositoryUrl>https://github.com/Agrabski/polyglot.git</RepositoryUrl>
-		<IncludeSymbols>false</IncludeSymbols>
+		<IncludeSymbols>true</IncludeSymbols>
 	</PropertyGroup>
 	<ItemGroup>
 		<Compile Include="..\..\polyglot_csharp\bindings\polyglot_csharp.cs" Link="polyglot_csharp.cs" />
