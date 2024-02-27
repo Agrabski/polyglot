@@ -43,7 +43,7 @@ jobs:
       - name: Publish NuGet and symbols
         uses: edumserrano/nuget-push@v1
         with:
-          api-key: '${{ secrets.NUGET_API_KEY }} ' # this example is using GitHub secrets to pass the API key
+          api-key: '${{ secrets.NUGET_API_KEY }}'
           working-directory: './out'
       - name: build js
         run: |
