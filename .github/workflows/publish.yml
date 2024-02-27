@@ -40,11 +40,10 @@ jobs:
           dotnet pack -c Release -o out
         working-directory: ./PolyglotCSharp
 
-      - name: Publish NuGet and symbols
-        uses: edumserrano/nuget-push@v1
-        with:
-          api-key: '${{ secrets.NUGET_API_KEY }}'
-          working-directory: './out'
+      - name: Push generated package
+        run: dotnet nuget push ./out\*.nupkg --skip-duplicate --no-symbols true -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
+        working-directory: ./PolyglotCSharp
+        
       - name: build js
         run: |
           cd polyglot_js
