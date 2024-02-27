@@ -36,8 +36,10 @@ Boolean operators:
 Comparison operators
 - `=` equal
 - `!` not equal
-- `>` first operand greater than second (only numeric values) (not implemented yet)
-- `>=` first operand greater or equal than second (only numeric values) (not implemented yet)
+- `>` first operand greater than second (only numeric values)
+- `]` first operand greater or equal than second (only numeric values)
+- `<` first operand less than second (only numeric values)
+- `[` first operand less or equal than second (only numeric values)
 
 Numeric values can be specified in `'` or as bare strings: `123` equivalent to `'123'`.
 
