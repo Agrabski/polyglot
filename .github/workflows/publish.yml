@@ -36,13 +36,15 @@ jobs:
           ignore-unpublished-changes: true
       - name: Build solution and generate NuGet package
         run: |
-          cd PolyglotCSharp
           dotnet build -c Release
           dotnet pack -c Release -o out
+        working-directory: ./PolyglotCSharp
 
-      - name: Push generated package
-        run: dotnet nuget push ./**/PolyglotCSharp.[0-9].[0-9].[0-9].nupkg  --skip-duplicate --no-symbols true -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
-
+      - name: Publish NuGet and symbols
+        uses: edumserrano/nuget-push@v1
+        with:
+          api-key: '${{ secrets.NUGET_API_KEY }} ' # this example is using GitHub secrets to pass the API key
+          working-directory: './out'
       - name: build js
         run: |
           cd polyglot_js
