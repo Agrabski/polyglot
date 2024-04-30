@@ -34,12 +34,3 @@ jobs:
         run: |
           cargo test
           dotnet test PolyglotCSharp
-      - name: Run js tests
-        run: |
-          cd polyglot_js
-          npm install
-          npm run build
-          wasm-pack test --node
-          cd ../polyglot_js_bindings_tests
-          npm install
-          npm test

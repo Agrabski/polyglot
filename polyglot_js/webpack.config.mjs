@@ -22,6 +22,7 @@ export default {
         })
     ],
     mode: 'production',
+    entry: './src/index.js',
     experiments: {
         asyncWebAssembly: true
     }

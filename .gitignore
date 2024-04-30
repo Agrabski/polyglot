@@ -18,3 +18,4 @@ PolyglotCSharp/.vs
 **/bin/**
 polyglot_js/dist/
 PolyglotCSharp/out/
+.mono
