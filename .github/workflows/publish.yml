@@ -47,6 +47,6 @@ jobs:
       - name: build js
         run: |
           cd polyglot_js
-          wasm-pack publish
+          wasm-pack publish --scope maslox303
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_API_KEY }}
