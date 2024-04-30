@@ -1,8 +1,11 @@
 [package]
+author = "Adam Grabski"
+description = "Cross language interpreter of simple logical expressions"
 edition = "2021"
 name = "polyglot_js"
 publish = false
-version = "0.1.0"
+readme = "../Readme.md"
+version = "0.1.2"
 
 [lib]
 crate-type = ["cdylib"]
