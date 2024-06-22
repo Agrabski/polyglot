@@ -20,6 +20,19 @@ Thats where polyglot comes in.
 This package provides a compiled interpreter of a simple language to express logical expressions, that can accept parameters.
 It is compiled to a native binary, as well as to webassemby, with bindings for several programming languages (currently: Rust, C\# and javascript).
 
+### Javascript instructions
+
+To use this package in your javascript project, install it with your favorite package manager `npm install @maslox303/polyglot_js`.
+You then have to initialize the module, before using the `evaluate function`.
+Example:
+```js
+import init from '@maslox303/polyglot_js'
+import {evaulate} from '@maslox303/polyglot_js'
+
+await init();
+console.log(evaluate('(= @a 1)', {a: 1}));
+```
+
 ### Language
 
 The language interpreted by polyglot is essentially constructed from boolean operators and comparison operators written in a Lisp-like Reversed Polish Notation
@@ -46,3 +59,4 @@ Numeric values can be specified in `'` or as bare strings: `123` equivalent to `
 Parameters can be accessed using `@`
 
 [Interpreter implementation file](polyglot/src/lib.rs), contains unit tests with additional expression examples.
+
