@@ -36,20 +36,18 @@ jobs:
           ignore-unpublished-changes: true
       - name: Build solution and generate NuGet package
         run: |
-          cd PolyglotCSharp
           dotnet build -c Release
           dotnet pack -c Release -o out
+        working-directory: ./PolyglotCSharp
 
       - name: Push generated package
-        run: dotnet nuget push ./**\*.nupkg --skip-duplicate --no-symbols true -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
+        run: dotnet nuget push *.nupkg --skip-duplicate -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
+        working-directory: ./PolyglotCSharp/out
 
       - name: build js
         run: |
           cd polyglot_js
-          npm ci
-          npm install
-          npm run build
-          npm publish --access=public
-          cd ../
+          wasm-pack build --scope maslox303
+          wasm-pack publish --access=public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_API_KEY }}

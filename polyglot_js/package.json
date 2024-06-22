@@ -1,6 +1,6 @@
 {
   "name": "@maslox303/polyglot_js",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Cross language interpreter of simple logical expressions",
   "author": "Adam Grabski",
   "readme": "../Readme.md",
@@ -19,5 +19,8 @@
     "webpack": "^5.90.3",
     "webpack-cli": "^5.1.4"
   },
-  "type": "module"
+  "type": "module",
+  "exports": {
+    ".": "./pkg/index.js"
+  }
 }

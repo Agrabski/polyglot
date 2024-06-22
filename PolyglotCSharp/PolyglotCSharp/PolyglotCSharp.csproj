@@ -5,35 +5,49 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<Version>1.0.0</Version>
+		<Version>1.0.1</Version>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<EmbedUntrackedSources>true</EmbedUntrackedSources>
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
-	</PropertyGroup>
-	<Target Name="Rust build" BeforeTargets="BeforeBuild">
-		<Exec Command="cargo build --release --target x86_64-pc-windows-gnu" WorkingDirectory="../../" />
-		<Exec Command="cargo build --release --target x86_64-unknown-linux-gnu" WorkingDirectory="../../" />
-	</Target>
-	<ItemGroup>
-		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
-	</ItemGroup>
-	<PropertyGroup>
-		<NativeOutputPath>../../target/</NativeOutputPath>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Authors>Agrabski</Authors>
 		<PackageReadmeFile>Readme.md</PackageReadmeFile>
 		<RepositoryUrl>https://github.com/Agrabski/polyglot.git</RepositoryUrl>
-		<IncludeSymbols>True</IncludeSymbols>
+		<IncludeSymbols>true</IncludeSymbols>
+		<Deterministic>true</Deterministic>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<Description>C# bindings for an universal interpreter of logical expression</Description>
 	</PropertyGroup>
+	<Target Name="Rust build" BeforeTargets="BeforeBuild">
+		<Exec Command="cargo build --release --target x86_64-pc-windows-gnu -p polyglot_csharp" WorkingDirectory="../../" />
+		<Exec Command="cargo build --release --target x86_64-unknown-linux-gnu  -p polyglot_csharp" WorkingDirectory="../../" />
+	</Target>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+	</ItemGroup>
 	<ItemGroup>
 		<Compile Include="..\..\polyglot_csharp\bindings\polyglot_csharp.cs" Link="polyglot_csharp.cs" />
 	</ItemGroup>
 	<ItemGroup>
-		<None Include="../../target/x86_64-pc-windows-gnu/release/polyglot_csharp.dll" CopyToOutputDirectory="PreserveNewest" />
-		<None Include="../../target/x86_64-unknown-linux-gnu/release/libpolyglot_csharp.so" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="../../target/x86_64-pc-windows-gnu/release/polyglot_csharp.dll">
+		  <Pack>True</Pack>
+		  <PackagePath>lib/$(TargetFramework)</PackagePath>
+		  <PackageCopyToOutput>true</PackageCopyToOutput>
+		  <Link>polyglot_csharp.dll</Link>
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		  <Visible>false</Visible>
+		</None>
+		<None Include="../../target/x86_64-unknown-linux-gnu/release/libpolyglot_csharp.so">
+		  <Pack>True</Pack>
+		  <PackagePath>lib/$(TargetFramework)</PackagePath>
+		  <PackageCopyToOutput>true</PackageCopyToOutput>
+		  <Link>libpolyglot_csharp.so</Link>
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		  <Visible>false</Visible>
+		</None>
 		<None Include="..\..\Readme.md">
 		  <Pack>True</Pack>
-		  <PackagePath>\</PackagePath>
+		  <PackagePath>/</PackagePath>
 		</None>
 	</ItemGroup>
 </Project>

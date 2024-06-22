@@ -1,4 +1,6 @@
 [package]
+author = "Adam Grabski"
+description = "Cross language interpreter of simple logical expressions"
 edition = "2021"
 name = "polyglot_js"
 publish = false
