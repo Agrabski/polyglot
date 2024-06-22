@@ -2,7 +2,10 @@
 edition = "2021"
 name = "polyglot_js"
 publish = false
-version = "0.1.0"
+readme = "../Readme.md"
+version = "1.2.0"
+license = "MIT"
+repository = "https://github.com/agrabski/polyglot"
 
 [lib]
 crate-type = ["cdylib"]
@@ -10,8 +13,8 @@ name = "polyglot_js"
 
 [dependencies]
 js-sys = "0.3.68"
-polyglot_interpreter = {path = "../polyglot"}
-wasm-bindgen = {version = "0.2.91"}
+polyglot_interpreter = { path = "../polyglot" }
+wasm-bindgen = { version = "0.2.91" }
 [profile.release]
 lto = true
 [build]
