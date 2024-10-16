@@ -17,4 +17,6 @@ PolyglotCSharp/.vs
 **/obj/*
 **/bin/**
 polyglot_js/dist/
+.mono/
 PolyglotCSharp/out/
+
