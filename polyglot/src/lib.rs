@@ -205,7 +205,7 @@ mod tests {
     #[test]
     pub fn simple_or_condition_with_second_true_operand_evaluates_to_true() {
         let parameters = HashMap::new();
-        assert!(!evaluate_boolean_expression("(| (= 'dev' 'test') (= 'test' 'test') (= 'prod' 'test'))", &parameters).unwrap());
+        assert!(evaluate_boolean_expression("(| (= 'dev' 'test') (= 'test' 'test') (= 'prod' 'test'))", &parameters).unwrap());
     }
 
     #[test]
