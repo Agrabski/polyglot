@@ -36,10 +36,12 @@ fn eval_internal<TParams: ParameterDictionary>(
             ) => {
                 let (left, index) = parse_operand(&expression[2..], parameters)?;
                 let (right, last_index) = parse_operand(&expression[index + 3..], parameters)?;
+                // include the closing ')' (and possible trailing delimiter) in the computed length
+                let expression_length = 5 + index + last_index;
                 match op {
-                    EQUAL_OPERATOR => Some((left == right, last_index)),
-                    NOT_EQUAL_OPERATOR => Some((left != right, last_index)),
-                    _ => compare_numeric_values(op, left, right).map(|v| (v, last_index)),
+                    EQUAL_OPERATOR => Some((left == right, expression_length)),
+                    NOT_EQUAL_OPERATOR => Some((left != right, expression_length)),
+                    _ => compare_numeric_values(op, left, right).map(|v| (v, expression_length)),
                 }
             }
             Some(op @ ('&' | '|')) => {
@@ -51,11 +53,16 @@ fn eval_internal<TParams: ParameterDictionary>(
                 };
                 let mut r = matches!(op, '&');
                 let mut final_index = 2;
-                while let Some((result, index)) = eval_internal(current_sub_expression, parameters)
-                {
-                    r = combine(r, result);
-                    current_sub_expression = &current_sub_expression[index..];
-                    final_index += index;
+                loop {
+                    let trimmed = current_sub_expression.trim_start();
+                    let leading = current_sub_expression.len() - trimmed.len();
+                    if let Some((result, index)) = eval_internal(trimmed, parameters) {
+                        r = combine(r, result);
+                        current_sub_expression = &current_sub_expression[leading + index..];
+                        final_index += leading + index;
+                    } else {
+                        break;
+                    }
                 }
                 Some((r, final_index))
             }
@@ -124,7 +131,7 @@ fn parse_operand<'a, TParams: ParameterDictionary>(
                 let sub_expression = &expression[start_index + 1..];
                 let end_index = sub_expression.chars().position(|c| c == '\'');
                 end_index
-                    .map(|end_index| (&sub_expression[..end_index], end_index + start_index + 1))
+                    .map(|end_index| (&sub_expression[..end_index], end_index + start_index + 2))
             }
             Some('@') => {
                 let sub_expression = &expression[start_index + 1..];
@@ -203,6 +210,16 @@ mod tests {
     }
 
     #[test]
+    pub fn simple_or_condition_with_second_true_operand_evaluates_to_true() {
+        let parameters = HashMap::new();
+        assert!(evaluate_boolean_expression(
+            "(| (= 'dev' 'test') (= 'test' 'test') (= 'prod' 'test'))",
+            &parameters
+        )
+        .unwrap());
+    }
+
+    #[test]
     pub fn simple_and_condition_evaluates_to_true() {
         let parameters = HashMap::new();
         assert!(evaluate_boolean_expression("(& (= 'a' 'a') (= 1 1))", &parameters).unwrap());
@@ -265,5 +282,59 @@ mod tests {
         let mut parameters = HashMap::new();
         parameters.insert("a".to_string(), "11".to_string());
         assert!(evaluate_boolean_expression("(< -111 @a)", &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn parse_operand_returns_none_for_empty_expression() {
+        let parameters = HashMap::new();
+        assert!(parse_operand("", &parameters).is_none());
+        assert!(parse_operand("   ", &parameters).is_none());
+    }
+
+    #[test]
+    pub fn parse_operand_returns_none_for_closing_paren() {
+        let parameters = HashMap::new();
+        assert!(parse_operand(")", &parameters).is_none());
+        assert!(parse_operand(" )", &parameters).is_none());
+    }
+
+    #[test]
+    pub fn parse_operand_parses_quoted_string_and_index() {
+        let parameters = HashMap::new();
+        let expr = "'abc' rest";
+        let (s, idx) = parse_operand(expr, &parameters).unwrap();
+        assert_eq!(s, "abc");
+        assert_eq!(expr[idx..], *" rest");
+
+        let expr2="  'xyz')";
+        let (s2, idx2) = parse_operand(expr2, &parameters).unwrap();
+        assert_eq!(s2, "xyz");
+        assert_eq!(expr2[idx2..], *")");
+    }
+
+    #[test]
+    pub fn parse_operand_parses_parameter_and_unknown_returns_empty() {
+        let mut parameters = HashMap::new();
+        parameters.insert("a".to_string(), "val".to_string());
+        let (s, idx) = parse_operand("@a)", &parameters).unwrap();
+        assert_eq!(s, "val");
+        assert_eq!(idx, 2);
+        let (s2, idx2) = parse_operand("@missing )", &parameters).unwrap();
+        assert_eq!(s2, "");
+        assert_eq!(idx2, 8);
+    }
+
+    #[test]
+    pub fn parse_operand_parses_numeric_literals() {
+        let parameters = HashMap::new();
+        let (s, idx) = parse_operand("123abc", &parameters).unwrap();
+        assert_eq!(s, "123");
+        assert_eq!(idx, 3);
+        let (s2, idx2) = parse_operand("-45 )", &parameters).unwrap();
+        assert_eq!(s2, "-45");
+        assert_eq!(idx2, 3);
+        let (s3, idx3) = parse_operand("-999", &parameters).unwrap();
+        assert_eq!(s3, "-999");
+        assert_eq!(idx3, 4);
     }
 }
