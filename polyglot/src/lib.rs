@@ -35,9 +35,10 @@ fn eval_internal<TParams: ParameterDictionary>(
                 | LESS_EQUAL_THAN_OPERATOR),
             ) => {
                 let (left, index) = parse_operand(&expression[2..], parameters)?;
-                let (right, last_index) = parse_operand(&expression[index + 3..], parameters)?;
+                let (right, last_index) = parse_operand(&expression[2 + index..], parameters)?;
                 // include the closing ')' (and possible trailing delimiter) in the computed length
-                let expression_length = 5 + index + last_index;
+                // expression starts with '(<'op> ' so the total length is 2 (for '(<op>') + index + last_index + 1 (for ')')
+                let expression_length = 3 + index + last_index;
                 match op {
                     EQUAL_OPERATOR => Some((left == right, expression_length)),
                     NOT_EQUAL_OPERATOR => Some((left != right, expression_length)),
@@ -337,4 +338,159 @@ mod tests {
         assert_eq!(s3, "-999");
         assert_eq!(idx3, 4);
     }
+
+    #[test]
+    pub fn complex_and_or_expression_evaluates_correctly_with_param() {
+        let mut parameters = HashMap::new();
+        parameters.insert("param".to_string(), "1".to_string());
+        let expr = "(& (| (= 'dev' 'test') (= 'prod' 'test') (= 'testx' 'test')) (= '1' @param))";
+        // The OR should be false, and the final result therefore false
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn inner_or_expression_evaluates_to_false() {
+        let parameters = HashMap::new();
+        let expr = "(| (= 'dev' 'test') (= 'prod' 'test') (= 'testx' 'test'))";
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn and_with_first_false_second_true_evaluates_to_false() {
+        let mut parameters = HashMap::new();
+        parameters.insert("param".to_string(), "1".to_string());
+        assert!(!evaluate_boolean_expression("(& (= 'a' 'b') (= '1' @param))", &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn and_with_inner_or_of_two_false_operands_evaluates_to_false() {
+        let mut parameters = HashMap::new();
+        parameters.insert("param".to_string(), "1".to_string());
+        let expr = "(& (| (= 'a' 'b') (= 'c' 'd')) (= '1' @param))";
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn inner_or_two_false_evaluates_false() {
+        let parameters = HashMap::new();
+        let expr = "(| (= 'a' 'b') (= 'c' 'd'))";
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
+        // also verify eval_internal on the same literal
+        if let Some((v, idx)) = eval_internal(expr, &parameters) {
+            assert!(!v);
+            assert!(idx > 0);
+        } else {
+            panic!("eval_internal failed on standalone inner OR");
+        }
+    }
+
+    #[test]
+    pub fn eval_internal_parsing_of_nested_or_in_and_looks_correct() {
+        let mut parameters = HashMap::new();
+        parameters.insert("param".to_string(), "1".to_string());
+        let expr = "(& (| (= 'a' 'b') (= 'c' 'd')) (= '1' @param))";
+        let current_sub_expression = &expr[2..];
+        let trimmed = current_sub_expression.trim_start();
+        let leading = current_sub_expression.len() - trimmed.len();
+        if let Some((inner_result, index)) = eval_internal(trimmed, &parameters) {
+            // Print debug info first
+
+            // inner_result should be false
+            assert!(!inner_result, "inner_result unexpectedly true");
+            // verify evaluate_boolean_expression on the same trimmed string
+            assert!(!evaluate_boolean_expression(trimmed, &parameters).unwrap());
+            // the remaining slice after consuming the inner expression should start with ')'
+            let rest = &current_sub_expression[leading + index..];
+            assert!(rest.trim_start().starts_with(')'));
+            // Verify that the inner OR actually parsed its subexpressions correctly by
+            // parsing the first sub-expression directly from the trimmed inner OR's body
+            let inner_or_body = &trimmed[2..];
+            let first_sub = inner_or_body.trim_start();
+            if let Some((first_result, first_index)) = eval_internal(first_sub, &parameters) {
+                assert!(!first_result, "first inner equality unexpectedly true");
+                let rest_after_first = &first_sub[first_index..];
+                if let Some((second_result, _)) = eval_internal(rest_after_first.trim_start(), &parameters) {
+                    assert!(!second_result, "second inner equality unexpectedly true");
+                } else {
+                    panic!("failed to parse second equality inside inner OR");
+                }
+            } else {
+                panic!("failed to parse first equality inside inner OR");
+            }
+        } else {
+            panic!("eval_internal failed to parse nested OR");
+        }
+
+        // Check behavior of parsing a single equality followed by another operand in a larger string
+        let s = "(= 'a' 'b') (= '1' @param))";
+        if let Some((v, idx)) = eval_internal(s, &parameters) {
+            assert!(!v);
+            // after consuming the equality, remaining string should start with '(' for next operand
+            assert!(s[idx..].trim_start().starts_with('('));
+        } else {
+            panic!("eval_internal failed on equality followed by other operand");
+        }
+
+    }
+
+    // Additional regression tests for nested and/or combinations and parameter cases
+    #[test]
+    pub fn nested_or_with_whitespace_and_param_evaluates_false() {
+        let mut parameters = HashMap::new();
+        parameters.insert("param".to_string(), "1".to_string());
+        let expr = "(& (|  (= 'dev'  'test')\n      (= 'prod' 'test')   (= 'testx'  'test' ) )  (= '1' @param))";
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn nested_or_inner_true_allows_and_true() {
+        let mut parameters = HashMap::new();
+        parameters.insert("param".to_string(), "1".to_string());
+        // inner OR has a true equality, and right side equals param
+        let expr = "(& (| (= 'dev' 'test') (= 'prod' 'test') (= 'test' 'test')) (= '1' @param))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn nested_deep_or_evaluates_false() {
+        let mut parameters = HashMap::new();
+        parameters.insert("param".to_string(), "1".to_string());
+        let expr = "(& (| (| (= 'a' 'b') (= 'c' 'd')) (= 'e' 'f')) (= '1' @param))";
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn and_or_mixed_true_and_false_variants() {
+        let mut parameters = HashMap::new();
+        parameters.insert("a".to_string(), "1".to_string());
+        parameters.insert("b".to_string(), "2".to_string());
+        let expr_true = "(& (= '1' @a) (| (= 'x' 'y') (= '2' @b)))";
+        assert!(evaluate_boolean_expression(expr_true, &parameters).unwrap());
+
+        // change b so the OR is false
+        parameters.insert("b".to_string(), "3".to_string());
+        let expr_false = "(& (= '1' @a) (| (= 'x' 'y') (= '2' @b)))";
+        assert!(!evaluate_boolean_expression(expr_false, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn or_many_operands_true_and_false() {
+        let parameters = HashMap::new();
+        let expr_true = "(| (= 'a' 'b') (= 'c' 'd') (= 'e' 'f') (= 'g' 'g'))";
+        assert!(evaluate_boolean_expression(expr_true, &parameters).unwrap());
+        let expr_false = "(| (= 'a' 'b') (= 'c' 'd') (= 'e' 'f'))";
+        assert!(!evaluate_boolean_expression(expr_false, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn param_missing_in_or_behaviour() {
+        let mut parameters = HashMap::new();
+        parameters.insert("a".to_string(), "1".to_string());
+        let expr = "(| (= '1' @a) (= '2' @missing))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+        // remove a
+        parameters.clear();
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
 }
+
