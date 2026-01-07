@@ -431,6 +431,66 @@ mod tests {
             panic!("eval_internal failed on equality followed by other operand");
         }
 
+    }
 
+    // Additional regression tests for nested and/or combinations and parameter cases
+    #[test]
+    pub fn nested_or_with_whitespace_and_param_evaluates_false() {
+        let mut parameters = HashMap::new();
+        parameters.insert("param".to_string(), "1".to_string());
+        let expr = "(& (|  (= 'dev'  'test')\n      (= 'prod' 'test')   (= 'testx'  'test' ) )  (= '1' @param))";
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn nested_or_inner_true_allows_and_true() {
+        let mut parameters = HashMap::new();
+        parameters.insert("param".to_string(), "1".to_string());
+        // inner OR has a true equality, and right side equals param
+        let expr = "(& (| (= 'dev' 'test') (= 'prod' 'test') (= 'test' 'test')) (= '1' @param))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn nested_deep_or_evaluates_false() {
+        let mut parameters = HashMap::new();
+        parameters.insert("param".to_string(), "1".to_string());
+        let expr = "(& (| (| (= 'a' 'b') (= 'c' 'd')) (= 'e' 'f')) (= '1' @param))";
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn and_or_mixed_true_and_false_variants() {
+        let mut parameters = HashMap::new();
+        parameters.insert("a".to_string(), "1".to_string());
+        parameters.insert("b".to_string(), "2".to_string());
+        let expr_true = "(& (= '1' @a) (| (= 'x' 'y') (= '2' @b)))";
+        assert!(evaluate_boolean_expression(expr_true, &parameters).unwrap());
+
+        // change b so the OR is false
+        parameters.insert("b".to_string(), "3".to_string());
+        let expr_false = "(& (= '1' @a) (| (= 'x' 'y') (= '2' @b)))";
+        assert!(!evaluate_boolean_expression(expr_false, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn or_many_operands_true_and_false() {
+        let parameters = HashMap::new();
+        let expr_true = "(| (= 'a' 'b') (= 'c' 'd') (= 'e' 'f') (= 'g' 'g'))";
+        assert!(evaluate_boolean_expression(expr_true, &parameters).unwrap());
+        let expr_false = "(| (= 'a' 'b') (= 'c' 'd') (= 'e' 'f'))";
+        assert!(!evaluate_boolean_expression(expr_false, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn param_missing_in_or_behaviour() {
+        let mut parameters = HashMap::new();
+        parameters.insert("a".to_string(), "1".to_string());
+        let expr = "(| (= '1' @a) (= '2' @missing))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+        // remove a
+        parameters.clear();
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
     }
 }
+
