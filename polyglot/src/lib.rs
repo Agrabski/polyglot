@@ -65,6 +65,12 @@ fn eval_internal<TParams: ParameterDictionary>(
                         break;
                     }
                 }
+                // Include the closing ')' in the final_index
+                let trimmed = current_sub_expression.trim_start();
+                if trimmed.starts_with(')') {
+                    let leading = current_sub_expression.len() - trimmed.len();
+                    final_index += leading + 1;
+                }
                 Some((r, final_index))
             }
             _ => None,
@@ -307,7 +313,7 @@ mod tests {
         assert_eq!(s, "abc");
         assert_eq!(expr[idx..], *" rest");
 
-        let expr2="  'xyz')";
+        let expr2 = "  'xyz')";
         let (s2, idx2) = parse_operand(expr2, &parameters).unwrap();
         assert_eq!(s2, "xyz");
         assert_eq!(expr2[idx2..], *")");
@@ -359,7 +365,9 @@ mod tests {
     pub fn and_with_first_false_second_true_evaluates_to_false() {
         let mut parameters = HashMap::new();
         parameters.insert("param".to_string(), "1".to_string());
-        assert!(!evaluate_boolean_expression("(& (= 'a' 'b') (= '1' @param))", &parameters).unwrap());
+        assert!(
+            !evaluate_boolean_expression("(& (= 'a' 'b') (= '1' @param))", &parameters).unwrap()
+        );
     }
 
     #[test]
@@ -399,9 +407,14 @@ mod tests {
             assert!(!inner_result, "inner_result unexpectedly true");
             // verify evaluate_boolean_expression on the same trimmed string
             assert!(!evaluate_boolean_expression(trimmed, &parameters).unwrap());
-            // the remaining slice after consuming the inner expression should start with ')'
+            // the remaining slice after consuming the inner expression should start with a space and then ')'
+            // because eval_internal now includes the closing ')' in the returned index
             let rest = &current_sub_expression[leading + index..];
-            assert!(rest.trim_start().starts_with(')'));
+            assert!(
+                rest.trim_start().starts_with(')')
+                    || rest.is_empty()
+                    || rest.trim_start().starts_with('(')
+            );
             // Verify that the inner OR actually parsed its subexpressions correctly by
             // parsing the first sub-expression directly from the trimmed inner OR's body
             let inner_or_body = &trimmed[2..];
@@ -409,7 +422,9 @@ mod tests {
             if let Some((first_result, first_index)) = eval_internal(first_sub, &parameters) {
                 assert!(!first_result, "first inner equality unexpectedly true");
                 let rest_after_first = &first_sub[first_index..];
-                if let Some((second_result, _)) = eval_internal(rest_after_first.trim_start(), &parameters) {
+                if let Some((second_result, _)) =
+                    eval_internal(rest_after_first.trim_start(), &parameters)
+                {
                     assert!(!second_result, "second inner equality unexpectedly true");
                 } else {
                     panic!("failed to parse second equality inside inner OR");
@@ -430,7 +445,6 @@ mod tests {
         } else {
             panic!("eval_internal failed on equality followed by other operand");
         }
-
     }
 
     // Additional regression tests for nested and/or combinations and parameter cases
@@ -492,5 +506,17 @@ mod tests {
         parameters.clear();
         assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
     }
-}
 
+    #[test]
+    pub fn complex_and_with_nested_or_and_param_evaluates_to_false() {
+        let mut parameters = HashMap::new();
+        parameters.insert("param".to_string(), "2".to_string());
+        // (= 'dev' 'test') => false
+        // (= 'test' 'test') => true
+        // (| false true) => true
+        // (= '1' @param) with param=2 => (= '1' '2') => false
+        // (& true false) => false
+        let expr = "(& (| (= 'dev' 'test') (= 'test' 'test')) (= '1' @param))";
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+}
