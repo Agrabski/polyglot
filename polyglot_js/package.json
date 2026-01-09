@@ -23,4 +23,5 @@
   "exports": {
     ".": "./pkg/index.js"
   }
+
 }
