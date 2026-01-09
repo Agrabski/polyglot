@@ -65,6 +65,12 @@ fn eval_internal<TParams: ParameterDictionary>(
                         break;
                     }
                 }
+                // Include the closing ')' in the final_index
+                let trimmed = current_sub_expression.trim_start();
+                if trimmed.starts_with(')') {
+                    let leading = current_sub_expression.len() - trimmed.len();
+                    final_index += leading + 1;
+                }
                 Some((r, final_index))
             }
             _ => None,
@@ -307,7 +313,7 @@ mod tests {
         assert_eq!(s, "abc");
         assert_eq!(expr[idx..], *" rest");
 
-        let expr2="  'xyz')";
+        let expr2 = "  'xyz')";
         let (s2, idx2) = parse_operand(expr2, &parameters).unwrap();
         assert_eq!(s2, "xyz");
         assert_eq!(expr2[idx2..], *")");
@@ -359,7 +365,9 @@ mod tests {
     pub fn and_with_first_false_second_true_evaluates_to_false() {
         let mut parameters = HashMap::new();
         parameters.insert("param".to_string(), "1".to_string());
-        assert!(!evaluate_boolean_expression("(& (= 'a' 'b') (= '1' @param))", &parameters).unwrap());
+        assert!(
+            !evaluate_boolean_expression("(& (= 'a' 'b') (= '1' @param))", &parameters).unwrap()
+        );
     }
 
     #[test]
@@ -399,9 +407,14 @@ mod tests {
             assert!(!inner_result, "inner_result unexpectedly true");
             // verify evaluate_boolean_expression on the same trimmed string
             assert!(!evaluate_boolean_expression(trimmed, &parameters).unwrap());
-            // the remaining slice after consuming the inner expression should start with ')'
+            // the remaining slice after consuming the inner expression should start with a space and then ')'
+            // because eval_internal now includes the closing ')' in the returned index
             let rest = &current_sub_expression[leading + index..];
-            assert!(rest.trim_start().starts_with(')'));
+            assert!(
+                rest.trim_start().starts_with(')')
+                    || rest.is_empty()
+                    || rest.trim_start().starts_with('(')
+            );
             // Verify that the inner OR actually parsed its subexpressions correctly by
             // parsing the first sub-expression directly from the trimmed inner OR's body
             let inner_or_body = &trimmed[2..];
@@ -409,7 +422,9 @@ mod tests {
             if let Some((first_result, first_index)) = eval_internal(first_sub, &parameters) {
                 assert!(!first_result, "first inner equality unexpectedly true");
                 let rest_after_first = &first_sub[first_index..];
-                if let Some((second_result, _)) = eval_internal(rest_after_first.trim_start(), &parameters) {
+                if let Some((second_result, _)) =
+                    eval_internal(rest_after_first.trim_start(), &parameters)
+                {
                     assert!(!second_result, "second inner equality unexpectedly true");
                 } else {
                     panic!("failed to parse second equality inside inner OR");
@@ -430,7 +445,6 @@ mod tests {
         } else {
             panic!("eval_internal failed on equality followed by other operand");
         }
-
     }
 
     // Additional regression tests for nested and/or combinations and parameter cases
@@ -492,5 +506,448 @@ mod tests {
         parameters.clear();
         assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
     }
-}
 
+    #[test]
+    pub fn complex_and_with_nested_or_and_param_evaluates_to_false() {
+        let mut parameters = HashMap::new();
+        parameters.insert("param".to_string(), "2".to_string());
+        // (= 'dev' 'test') => false
+        // (= 'test' 'test') => true
+        // (| false true) => true
+        // (= '1' @param) with param=2 => (= '1' '2') => false
+        // (& true false) => false
+        let expr = "(& (| (= 'dev' 'test') (= 'test' 'test')) (= '1' @param))";
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn complex_and_with_nested_or_and_matching_param_evaluates_to_true() {
+        let mut parameters = HashMap::new();
+        parameters.insert("param".to_string(), "1".to_string());
+        // (= 'dev' 'test') => false
+        // (= 'test' 'test') => true
+        // (| false true) => true
+        // (= '1' @param) with param=1 => (= '1' '1') => true
+        // (& true true) => true
+        let expr = "(& (| (= 'dev' 'test') (= 'test' 'test')) (= '1' @param))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn complex_and_with_all_false_or_operands() {
+        let mut parameters = HashMap::new();
+        parameters.insert("param".to_string(), "1".to_string());
+        // (= 'dev' 'test') => false
+        // (= 'prod' 'test') => false
+        // (= 'staging' 'test') => false
+        // (| false false false) => false
+        // (= '1' @param) => true
+        // (& false true) => false
+        let expr = "(& (| (= 'dev' 'test') (= 'prod' 'test') (= 'staging' 'test')) (= '1' @param))";
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn complex_and_with_multiple_or_operands_one_true() {
+        let mut parameters = HashMap::new();
+        parameters.insert("env".to_string(), "prod".to_string());
+        // (= 'dev' @env) with env=prod => false
+        // (= 'staging' @env) with env=prod => false
+        // (= 'prod' @env) with env=prod => true
+        // (| false false true) => true
+        // (= '1' '1') => true
+        // (& true true) => true
+        let expr = "(& (| (= 'dev' @env) (= 'staging' @env) (= 'prod' @env)) (= '1' '1'))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn complex_and_with_matching_param_first_true_second_false() {
+        let mut parameters = HashMap::new();
+        parameters.insert("status".to_string(), "active".to_string());
+        // (= 'active' @status) with status=active => true
+        // (= 'inactive' @status) with status=active => false
+        // (| true false) => true
+        // (= '0' '1') => false
+        // (& true false) => false
+        let expr = "(& (| (= 'active' @status) (= 'inactive' @status)) (= '0' '1'))";
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn nested_and_inside_or_with_params() {
+        let mut parameters = HashMap::new();
+        parameters.insert("a".to_string(), "1".to_string());
+        parameters.insert("b".to_string(), "2".to_string());
+        // (& (= '1' @a) (= '2' @b)) => (& true true) => true
+        // (= 'x' 'y') => false
+        // (| true false) => true
+        let expr = "(| (& (= '1' @a) (= '2' @b)) (= 'x' 'y'))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn nested_and_inside_or_with_params_all_false() {
+        let mut parameters = HashMap::new();
+        parameters.insert("a".to_string(), "5".to_string());
+        parameters.insert("b".to_string(), "9".to_string());
+        // (& (= '1' @a) (= '2' @b)) => (& false false) => false
+        // (= 'x' 'y') => false
+        // (| false false) => false
+        let expr = "(| (& (= '1' @a) (= '2' @b)) (= 'x' 'y'))";
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn deeply_nested_or_with_multiple_params() {
+        let mut parameters = HashMap::new();
+        parameters.insert("env".to_string(), "staging".to_string());
+        parameters.insert("debug".to_string(), "true".to_string());
+        // (| (= 'dev' @env) (= 'staging' @env)) => (| false true) => true
+        // (= 'true' @debug) => true
+        // (& true true) => true
+        let expr = "(& (| (= 'dev' @env) (= 'staging' @env)) (= 'true' @debug))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn deeply_nested_or_with_multiple_params_second_param_false() {
+        let mut parameters = HashMap::new();
+        parameters.insert("env".to_string(), "staging".to_string());
+        parameters.insert("debug".to_string(), "false".to_string());
+        // (| (= 'dev' @env) (= 'staging' @env)) => (| false true) => true
+        // (= 'true' @debug) with debug=false => false
+        // (& true false) => false
+        let expr = "(& (| (= 'dev' @env) (= 'staging' @env)) (= 'true' @debug))";
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn and_with_or_containing_three_params() {
+        let mut parameters = HashMap::new();
+        parameters.insert("x".to_string(), "10".to_string());
+        parameters.insert("y".to_string(), "20".to_string());
+        parameters.insert("z".to_string(), "30".to_string());
+        // (| (= '10' @x) (= '10' @y) (= '10' @z)) => (| true false false) => true
+        // (= '1' '1') => true
+        // (& true true) => true
+        let expr = "(& (| (= '10' @x) (= '10' @y) (= '10' @z)) (= '1' '1'))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn and_with_or_containing_three_params_no_match() {
+        let mut parameters = HashMap::new();
+        parameters.insert("x".to_string(), "5".to_string());
+        parameters.insert("y".to_string(), "6".to_string());
+        parameters.insert("z".to_string(), "7".to_string());
+        // (| (= '10' @x) (= '10' @y) (= '10' @z)) => (| false false false) => false
+        // (= '1' '1') => true
+        // (& false true) => false
+        let expr = "(& (| (= '10' @x) (= '10' @y) (= '10' @z)) (= '1' '1'))";
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn multiple_ands_and_ors_complex_expression() {
+        let mut parameters = HashMap::new();
+        parameters.insert("role".to_string(), "admin".to_string());
+        parameters.insert("active".to_string(), "1".to_string());
+        // (| (= 'admin' @role) (= 'superuser' @role)) => true
+        // (= '1' @active) => true
+        // (& true true) => true
+        // (= 'allowed' 'allowed') => true
+        // (| true true) => true
+        let expr = "(| (& (| (= 'admin' @role) (= 'superuser' @role)) (= '1' @active)) (= 'allowed' 'allowed'))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn complex_expression_with_mixed_literal_and_param_matches() {
+        let mut parameters = HashMap::new();
+        parameters.insert("tier".to_string(), "premium".to_string());
+        // (= 'free' 'free') => true
+        // (= 'premium' @tier) with tier=premium => true
+        // (| true true) => true
+        // (= 'yes' 'yes') => true
+        // (& true true) => true
+        let expr = "(& (| (= 'free' 'free') (= 'premium' @tier)) (= 'yes' 'yes'))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn three_level_nested_ors() {
+        let mut parameters = HashMap::new();
+        parameters.insert("env".to_string(), "staging".to_string());
+        // (| (= 'dev' @env) (| (= 'staging' @env) (= 'prod' @env))) => (| false (| true false)) => (| false true) => true
+        let expr = "(| (= 'dev' @env) (| (= 'staging' @env) (= 'prod' @env)))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn three_level_nested_ands() {
+        let mut parameters = HashMap::new();
+        parameters.insert("a".to_string(), "1".to_string());
+        parameters.insert("b".to_string(), "1".to_string());
+        // (& (= '1' @a) (& (= '1' @b) (= 'x' 'x'))) => (& true (& true true)) => (& true true) => true
+        let expr = "(& (= '1' @a) (& (= '1' @b) (= 'x' 'x')))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn alternating_and_or_left_heavy() {
+        let mut parameters = HashMap::new();
+        parameters.insert("x".to_string(), "yes".to_string());
+        parameters.insert("y".to_string(), "no".to_string());
+        // (& (| (= 'yes' @x) (= 'yes' @y)) (= '1' '1'))
+        // => (& (| true false) true) => (& true true) => true
+        let expr = "(& (| (= 'yes' @x) (= 'yes' @y)) (= '1' '1'))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn alternating_or_and_right_heavy() {
+        let mut parameters = HashMap::new();
+        parameters.insert("p".to_string(), "1".to_string());
+        parameters.insert("q".to_string(), "2".to_string());
+        // (| (= '0' '1') (& (= '1' @p) (= '2' @q)))
+        // => (| false (& true true)) => (| false true) => true
+        let expr = "(| (= '0' '1') (& (= '1' @p) (= '2' @q)))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn four_operand_or_all_false() {
+        let parameters = HashMap::new();
+        let expr = "(| (= 'a' 'b') (= 'c' 'd') (= 'e' 'f') (= 'g' 'h'))";
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn four_operand_and_all_true() {
+        let parameters = HashMap::new();
+        let expr = "(& (= 'a' 'a') (= 'b' 'b') (= 'c' 'c') (= 'd' 'd'))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn four_operand_and_one_false() {
+        let parameters = HashMap::new();
+        let expr = "(& (= 'a' 'a') (= 'b' 'b') (= 'c' 'd') (= 'e' 'e'))";
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn nested_or_with_four_branches() {
+        let mut parameters = HashMap::new();
+        parameters.insert("role".to_string(), "viewer".to_string());
+        // (| (= 'admin' @role) (= 'moderator' @role) (= 'editor' @role) (= 'viewer' @role))
+        // => (| false false false true) => true
+        let expr =
+            "(| (= 'admin' @role) (= 'moderator' @role) (= 'editor' @role) (= 'viewer' @role))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn and_of_two_ors_both_true() {
+        let mut parameters = HashMap::new();
+        parameters.insert("env".to_string(), "prod".to_string());
+        parameters.insert("secure".to_string(), "yes".to_string());
+        // (& (| (= 'dev' @env) (= 'prod' @env)) (| (= 'no' @secure) (= 'yes' @secure)))
+        // => (& (| false true) (| false true)) => (& true true) => true
+        let expr = "(& (| (= 'dev' @env) (= 'prod' @env)) (| (= 'no' @secure) (= 'yes' @secure)))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn and_of_two_ors_first_false() {
+        let mut parameters = HashMap::new();
+        parameters.insert("env".to_string(), "test".to_string());
+        parameters.insert("secure".to_string(), "yes".to_string());
+        // (& (| (= 'dev' @env) (= 'prod' @env)) (| (= 'no' @secure) (= 'yes' @secure)))
+        // => (& (| false false) (| false true)) => (& false true) => false
+        let expr = "(& (| (= 'dev' @env) (= 'prod' @env)) (| (= 'no' @secure) (= 'yes' @secure)))";
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn or_of_two_ands_first_true() {
+        let mut parameters = HashMap::new();
+        parameters.insert("a".to_string(), "1".to_string());
+        parameters.insert("b".to_string(), "1".to_string());
+        // (| (& (= '1' @a) (= '1' @b)) (& (= '2' @a) (= '2' @b)))
+        // => (| (& true true) (& false false)) => (| true false) => true
+        let expr = "(| (& (= '1' @a) (= '1' @b)) (& (= '2' @a) (= '2' @b)))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn or_of_three_ands_middle_true() {
+        let mut parameters = HashMap::new();
+        parameters.insert("x".to_string(), "5".to_string());
+        // (| (& (= '1' '2') (= '3' '4')) (& (= '5' @x) (= 'y' 'y')) (& (= 'a' 'b') (= 'c' 'd')))
+        // => (| (& false false) (& true true) (& false false)) => (| false true false) => true
+        let expr = "(| (& (= '1' '2') (= '3' '4')) (& (= '5' @x) (= 'y' 'y')) (& (= 'a' 'b') (= 'c' 'd')))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn deeply_nested_six_levels() {
+        let mut parameters = HashMap::new();
+        parameters.insert("flag".to_string(), "true".to_string());
+        // (& (| (& (| (= 'a' 'a') (= 'b' 'b')) (= 'c' 'c')) (= 'd' 'd')) (= 'true' @flag))
+        // inner OR: (| (= 'a' 'a') (= 'b' 'b')) => (| true true) => true
+        // inner AND: (& true (= 'c' 'c')) => (& true true) => true
+        // middle OR: (| true (= 'd' 'd')) => (| true true) => true
+        // outer AND: (& true (= 'true' @flag)) => (& true true) => true
+        let expr =
+            "(& (| (& (| (= 'a' 'a') (= 'b' 'b')) (= 'c' 'c')) (= 'd' 'd')) (= 'true' @flag))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn deeply_nested_six_levels_false() {
+        let mut parameters = HashMap::new();
+        parameters.insert("flag".to_string(), "false".to_string());
+        // (& (| (& (| (= 'a' 'a') (= 'b' 'b')) (= 'c' 'c')) (= 'd' 'd')) (= 'true' @flag))
+        // inner OR: (| (= 'a' 'a') (= 'b' 'b')) => true
+        // inner AND: (& true (= 'c' 'c')) => true
+        // middle OR: (| true (= 'd' 'd')) => true
+        // outer AND: (& true (= 'true' @flag)) with flag=false => (& true false) => false
+        let expr =
+            "(& (| (& (| (= 'a' 'a') (= 'b' 'b')) (= 'c' 'c')) (= 'd' 'd')) (= 'true' @flag))";
+        assert!(!evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn mixed_params_and_literals_alternating() {
+        let mut parameters = HashMap::new();
+        parameters.insert("p1".to_string(), "val1".to_string());
+        parameters.insert("p2".to_string(), "val2".to_string());
+        // (& (| (= 'literal' 'literal') (= 'val1' @p1)) (| (= 'val2' @p2) (= 'other' 'other')))
+        // => (& (| true true) (| true true)) => (& true true) => true
+        let expr =
+            "(& (| (= 'literal' 'literal') (= 'val1' @p1)) (| (= 'val2' @p2) (= 'other' 'other')))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn mixed_params_and_literals_one_param_mismatch() {
+        let mut parameters = HashMap::new();
+        parameters.insert("p1".to_string(), "val1".to_string());
+        parameters.insert("p2".to_string(), "wrong".to_string());
+        // (& (| (= 'literal' 'literal') (= 'val1' @p1)) (| (= 'val2' @p2) (= 'other' 'other')))
+        // => (& (| true true) (| false true)) => (& true true) => true
+        let expr =
+            "(& (| (= 'literal' 'literal') (= 'val1' @p1)) (| (= 'val2' @p2) (= 'other' 'other')))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn five_operand_and_with_params() {
+        let mut parameters = HashMap::new();
+        parameters.insert("a".to_string(), "1".to_string());
+        parameters.insert("b".to_string(), "2".to_string());
+        parameters.insert("c".to_string(), "3".to_string());
+        // (& (= '1' @a) (= '2' @b) (= '3' @c) (= 'x' 'x') (= 'y' 'y'))
+        // => (& true true true true true) => true
+        let expr = "(& (= '1' @a) (= '2' @b) (= '3' @c) (= 'x' 'x') (= 'y' 'y'))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn five_operand_or_with_params_last_true() {
+        let mut parameters = HashMap::new();
+        parameters.insert("a".to_string(), "5".to_string());
+        // (| (= '1' @a) (= '2' @a) (= '3' @a) (= '4' @a) (= '5' @a))
+        // => (| false false false false true) => true
+        let expr = "(| (= '1' @a) (= '2' @a) (= '3' @a) (= '4' @a) (= '5' @a))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn nested_structure_and_or_and() {
+        let mut parameters = HashMap::new();
+        parameters.insert("env".to_string(), "staging".to_string());
+        // (& (| (= 'dev' @env) (= 'staging' @env)) (& (= 'check1' 'check1') (= 'check2' 'check2')))
+        // => (& (| false true) (& true true)) => (& true true) => true
+        let expr = "(& (| (= 'dev' @env) (= 'staging' @env)) (& (= 'check1' 'check1') (= 'check2' 'check2')))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn nested_structure_or_and_or() {
+        let mut parameters = HashMap::new();
+        parameters.insert("role".to_string(), "guest".to_string());
+        // (| (& (= 'admin' @role) (= 'verified' 'yes')) (| (= 'guest' @role) (= 'user' @role)))
+        // => (| (& false false) (| true false)) => (| false true) => true
+        let expr =
+            "(| (& (= 'admin' @role) (= 'verified' 'yes')) (| (= 'guest' @role) (= 'user' @role)))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn complex_middle_nesting_with_four_params() {
+        let mut parameters = HashMap::new();
+        parameters.insert("tier".to_string(), "gold".to_string());
+        parameters.insert("active".to_string(), "1".to_string());
+        parameters.insert("verified".to_string(), "yes".to_string());
+        parameters.insert("age".to_string(), "30".to_string());
+        // (& (| (= 'gold' @tier) (= 'platinum' @tier)) (& (= '1' @active) (| (= 'yes' @verified) (= 'no' @verified))))
+        // inner OR: (| (= 'yes' @verified) (= 'no' @verified)) => (| true false) => true
+        // middle AND: (& (= '1' @active) true) => (& true true) => true
+        // first OR: (| (= 'gold' @tier) (= 'platinum' @tier)) => (| true false) => true
+        // outer AND: (& true true) => true
+        let expr = "(& (| (= 'gold' @tier) (= 'platinum' @tier)) (& (= '1' @active) (| (= 'yes' @verified) (= 'no' @verified))))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn long_chain_ands_with_literal_comparisons() {
+        let parameters = HashMap::new();
+        // (& (= 'a' 'a') (& (= 'b' 'b') (& (= 'c' 'c') (& (= 'd' 'd') (= 'e' 'e')))))
+        // Multiple levels of nested ANDs with all true
+        let expr = "(& (= 'a' 'a') (& (= 'b' 'b') (& (= 'c' 'c') (& (= 'd' 'd') (= 'e' 'e')))))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn long_chain_ors_with_last_true() {
+        let parameters = HashMap::new();
+        // (| (= 'a' 'b') (| (= 'c' 'd') (| (= 'e' 'f') (| (= 'g' 'h') (= 'i' 'i')))))
+        // Multiple levels of nested ORs, only last one is true
+        let expr = "(| (= 'a' 'b') (| (= 'c' 'd') (| (= 'e' 'f') (| (= 'g' 'h') (= 'i' 'i')))))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn zipper_pattern_alternating_nesting() {
+        let mut parameters = HashMap::new();
+        parameters.insert("flag1".to_string(), "on".to_string());
+        parameters.insert("flag2".to_string(), "off".to_string());
+        parameters.insert("flag3".to_string(), "on".to_string());
+        // (& (| (= 'on' @flag1) (= 'x' 'y')) (& (= 'off' @flag2) (| (= 'on' @flag3) (= 'z' 'w'))))
+        // inner OR: (| (= 'on' @flag3) (= 'z' 'w')) => (| true false) => true
+        // inner AND: (& (= 'off' @flag2) true) => (& true true) => true
+        // first OR: (| (= 'on' @flag1) (= 'x' 'y')) => (| true false) => true
+        // outer AND: (& true true) => true
+        let expr = "(& (| (= 'on' @flag1) (= 'x' 'y')) (& (= 'off' @flag2) (| (= 'on' @flag3) (= 'z' 'w'))))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn complex_boolean_with_many_params_mixed_distribution() {
+        let mut parameters = HashMap::new();
+        parameters.insert("a".to_string(), "alpha".to_string());
+        parameters.insert("b".to_string(), "beta".to_string());
+        parameters.insert("c".to_string(), "gamma".to_string());
+        parameters.insert("d".to_string(), "delta".to_string());
+        // (| (& (= 'alpha' @a) (= 'beta' @b)) (& (= 'gamma' @c) (| (= 'delta' @d) (= 'epsilon' 'epsilon'))))
+        // left AND: (& true true) => true
+        // inner OR: (| (= 'delta' @d) (= 'epsilon' 'epsilon')) => (| true true) => true
+        // right AND: (& true true) => true
+        // outer OR: (| true true) => true
+        let expr = "(| (& (= 'alpha' @a) (= 'beta' @b)) (& (= 'gamma' @c) (| (= 'delta' @d) (= 'epsilon' 'epsilon'))))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+}

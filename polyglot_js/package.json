@@ -1,6 +1,6 @@
 {
   "name": "@maslox303/polyglot_js",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "Cross language interpreter of simple logical expressions",
   "author": "Adam Grabski",
   "readme": "../Readme.md",
