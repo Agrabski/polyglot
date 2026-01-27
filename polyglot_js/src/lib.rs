@@ -49,4 +49,26 @@ mod tests {
         let result = evaluate("(= @a 1)", &map);
         assert!(result);
     }
-}
+
+    #[wasm_bindgen_test]
+    fn polish_special_characters_in_literals() {
+        let map = Object::new();
+        let result = evaluate("(= 'Zażółć' 'Zażółć')", &map);
+        assert!(result);
+    }
+
+    #[wasm_bindgen_test]
+    fn polish_special_characters_in_parameters() {
+        let map = Object::new();
+        Reflect::set(&map, &"greeting".into(), &"Cześć".into()).unwrap();
+        let result = evaluate("(= 'Cześć' @greeting)", &map);
+        assert!(result);
+    }
+
+    #[wasm_bindgen_test]
+    fn polish_characters_in_complex_expression() {
+        let map = Object::new();
+        Reflect::set(&map, &"miasto".into(), &"Łódź".into()).unwrap();
+        let result = evaluate("(& (= 'Łódź' @miasto) (= 'polska' 'polska'))", &map);
+        assert!(result);
+    }
