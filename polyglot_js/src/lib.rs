@@ -72,3 +72,4 @@ mod tests {
         let result = evaluate("(& (= 'Łódź' @miasto) (= 'polska' 'polska'))", &map);
         assert!(result);
     }
+}
