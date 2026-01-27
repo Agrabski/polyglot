@@ -129,44 +129,62 @@ fn parse_operand<'a, TParams: ParameterDictionary>(
     expression: &'a str,
     parameters: &'a TParams,
 ) -> Option<(&'a str, usize)> {
-    let start_index = expression.chars().position(|c| !c.is_whitespace());
-    match start_index {
+    let trimmed = expression.trim_start();
+    let leading_whitespace = expression.len() - trimmed.len();
+    
+    match trimmed.chars().next() {
         None => None,
-        Some(start_index) => match expression.chars().nth(start_index) {
-            Some(')') => None,
-            Some('\'') => {
-                let sub_expression = &expression[start_index + 1..];
-                let end_index = sub_expression.chars().position(|c| c == '\'');
-                end_index
-                    .map(|end_index| (&sub_expression[..end_index], end_index + start_index + 2))
-            }
-            Some('@') => {
-                let sub_expression = &expression[start_index + 1..];
-                let end_index = sub_expression
-                    .chars()
-                    .position(|c| c.is_whitespace() || c == ')');
-                end_index.map(|end_index| {
-                    (
-                        parameters.get(&sub_expression[..end_index]).unwrap_or(""),
-                        end_index + start_index + 1,
-                    )
-                })
-            }
-            Some(char) => {
-                if char.is_ascii_digit() || char == '-' {
-                    let sub_expression = &expression[start_index..];
-                    let end_index = sub_expression
-                        .chars()
-                        .position(|c| !c.is_ascii_digit() && c != '-')
-                        .unwrap_or(expression.len());
-                    Some((&sub_expression[..end_index], end_index + start_index))
-                } else {
-                    None
+        Some(')') => None,
+        Some('\'') => {
+            // Find closing quote, handling multi-byte UTF-8 characters correctly
+            let after_quote = &trimmed[1..]; // Skip opening quote
+            let mut byte_pos = 0;
+            let mut char_count = 0;
+            for c in after_quote.chars() {
+                if c == '\'' {
+                    return Some((&after_quote[..byte_pos], leading_whitespace + 1 + byte_pos + 1));
                 }
+                byte_pos += c.len_utf8();
+                char_count += 1;
             }
-
-            _ => None,
-        },
+            None // No closing quote found
+        }
+        Some('@') => {
+            // Parse parameter name, handling multi-byte UTF-8 characters correctly
+            let param_name_start = &trimmed[1..]; // Skip @ symbol
+            let mut byte_pos = 0;
+            for c in param_name_start.chars() {
+                if c.is_whitespace() || c == ')' {
+                    let param_name = &param_name_start[..byte_pos];
+                    return Some((
+                        parameters.get(param_name).unwrap_or(""),
+                        leading_whitespace + 1 + byte_pos,
+                    ));
+                }
+                byte_pos += c.len_utf8();
+            }
+            // If we reach end of string, parameter name extends to end
+            Some((
+                parameters.get(param_name_start).unwrap_or(""),
+                leading_whitespace + 1 + param_name_start.len(),
+            ))
+        }
+        Some(ch) => {
+            if ch.is_ascii_digit() || ch == '-' {
+                // Parse numeric literal, handling multi-byte UTF-8 characters correctly
+                let mut byte_pos = 0;
+                for c in trimmed.chars() {
+                    if !c.is_ascii_digit() && c != '-' {
+                        return Some((&trimmed[..byte_pos], leading_whitespace + byte_pos));
+                    }
+                    byte_pos += c.len_utf8();
+                }
+                // If we reach end of string, number extends to end
+                Some((&trimmed[..byte_pos], leading_whitespace + byte_pos))
+            } else {
+                None
+            }
+        }
     }
 }
 
@@ -948,6 +966,36 @@ mod tests {
         // right AND: (& true true) => true
         // outer OR: (| true true) => true
         let expr = "(| (& (= 'alpha' @a) (= 'beta' @b)) (& (= 'gamma' @c) (| (= 'delta' @d) (= 'epsilon' 'epsilon'))))";
+        assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn polish_characters_in_literals() {
+        let mut parameters = HashMap::new();
+        parameters.insert("lang".to_string(), "polski".to_string());
+        // Test with Polish characters in string literals
+        assert!(evaluate_boolean_expression("(= 'polski' @lang)", &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn polish_special_characters_in_parameters() {
+        let mut parameters = HashMap::new();
+        // Polish special characters: ąćęłńóśźż
+        parameters.insert("greeting".to_string(), "Cześć".to_string());
+        assert!(evaluate_boolean_expression("(= 'Cześć' @greeting)", &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn polish_special_characters_in_literals() {
+        let parameters = HashMap::new();
+        assert!(evaluate_boolean_expression("(= 'Zażółć' 'Zażółć')", &parameters).unwrap());
+    }
+
+    #[test]
+    pub fn polish_characters_in_complex_expression() {
+        let mut parameters = HashMap::new();
+        parameters.insert("miasto".to_string(), "Łódź".to_string());
+        let expr = "(& (= 'Łódź' @miasto) (= 'polska' 'polska'))";
         assert!(evaluate_boolean_expression(expr, &parameters).unwrap());
     }
 }

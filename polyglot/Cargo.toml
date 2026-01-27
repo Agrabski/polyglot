@@ -6,7 +6,7 @@ license = "MIT"
 name = "polyglot_interpreter"
 readme = "../Readme.md"
 repository = "https://github.com/Agrabski/polyglot"
-version = "1.0.5"
+version = "1.4.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
